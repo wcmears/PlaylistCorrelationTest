@@ -14,53 +14,100 @@ class GetSoundStats:
 
     def getStats(self, y, sr, playlist):
 
+        start_time = time.perf_counter()
         # Calculate the spectral centroid
         spectralCentroid = librosa.feature.spectral_centroid(y=y, sr=sr)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for spectral centroid: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the spectral rolloff
         spectralRolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)
-        
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for spectral rolloff: {elapsed_time:.6f} seconds")
+
+        start_time = time.perf_counter()
         # Calculate the short-time Fourier transform (STFT)
         hop_length = 512
         n_fft = 2048
         stft = librosa.stft(y, n_fft=n_fft, hop_length=hop_length)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for STFT: {elapsed_time:.6f} seconds")
+
+        start_time = time.perf_counter()
         # Calculate the magnitude spectrogram
         mag_spec = librosa.magphase(stft)[0]
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for magnitude spectrogram: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the spectral flux
         spectral_flux = librosa.feature.delta(mag_spec, order=1)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for spectral flux: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the ZCR
         zero_crossing_rate = librosa.feature.zero_crossing_rate(y)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for ZCR: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the spectral contrast
         spectral_contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for spectral contrast: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the onset strength
         onset_strength = librosa.onset.onset_strength(y=y, sr=sr)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for onset strength: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the energy
-        energy = sum(abs(y)**2)
+        energy = np.sum(np.square(y))
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for energy: {elapsed_time:.6f} seconds")
 
+        start_time = time.perf_counter()
         # Calculate the entropy of energy
         frame_size_ms = 30  # frame size in milliseconds
         frame_size = int(frame_size_ms * sr / 1000)  # frame size in samples
-        energy = sum(abs(y)**2)
-        entropy = 0.0
-        for i in range(0, len(y), frame_size):
-            frame_energy = sum(abs(y[i:i+frame_size])**2) / (energy + 1e-6)  # add a small number to prevent division by zero
-            p = frame_energy
-            if p > 0:  # only calculate entropy for non-zero probabilities
-                entropy -= p * np.log2(p)
-        
+        energy = np.sum(y**2)
+        y_frames = np.reshape(y[:len(y)//frame_size*frame_size], (-1, frame_size))
+        frame_energy = np.sum(y_frames**2, axis=1) / (energy + 1e-6)
+        p = frame_energy[:, None]
+        mask = p > 0
+        entropy = -np.sum(p[mask] * np.log2(p[mask]))
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for entropy of energy: {elapsed_time:.6f} seconds")
+
+        start_time = time.perf_counter()
         # Calculate the MFCCs with 12 coefficients
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for MFCC: {elapsed_time:.6f} seconds")
+
+        start_time = time.perf_counter()
+        # Calculate the chroma vector with 12 pitch classes
+        chroma = librosa.feature.chroma_stft(y=y, sr=sr, n_chroma=12)
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time for chroma vector: {elapsed_time:.6f} seconds")
 
         self.mfcc = np.array(mfcc)
-
-        # Calculate the chroma vector with 12 pitch classes
-        chroma = librosa.feature.chroma_cqt(y=y, sr=sr, n_chroma=12)
-
         self.chroma = np.array(chroma)
 
         # Create a dictionary to hold all of the sound stats
@@ -174,8 +221,13 @@ def main():
                     
                     playlist = str(os.path.basename(os.path.normpath(playlist_dir)))
 
+                    start_time = time.perf_counter()
                     # Load the audio file using librosa
                     y, sr = librosa.load(song_path)
+
+                    end_time = time.perf_counter()
+                    elapsed_time = end_time - start_time
+                    print(f"Elapsed time for song to load: {elapsed_time:.6f} seconds")
 
                     # Get sound stats using GetSoundStats class
                     stats = GetSoundStats().getStats(y, sr, playlist)

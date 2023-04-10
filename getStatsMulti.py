@@ -47,18 +47,17 @@ class GetSoundStats:
         onset_strength = librosa.onset.onset_strength(y=y, sr=sr)
 
         # Calculate the energy
-        energy = sum(abs(y)**2)
+        energy = np.sum(np.square(y))
 
         # Calculate the entropy of energy
         frame_size_ms = 30  # frame size in milliseconds
         frame_size = int(frame_size_ms * sr / 1000)  # frame size in samples
-        energy = sum(abs(y)**2)
-        entropy = 0.0
-        for i in range(0, len(y), frame_size):
-            frame_energy = sum(abs(y[i:i+frame_size])**2) / (energy + 1e-6)  # add a small number to prevent division by zero
-            p = frame_energy
-            if p > 0:  # only calculate entropy for non-zero probabilities
-                entropy -= p * np.log2(p)
+        energy = np.sum(y**2)
+        y_frames = np.reshape(y[:len(y)//frame_size*frame_size], (-1, frame_size))
+        frame_energy = np.sum(y_frames**2, axis=1) / (energy + 1e-6)
+        p = frame_energy[:, None]
+        mask = p > 0
+        entropy = -np.sum(p[mask] * np.log2(p[mask]))
         
         # Calculate the MFCCs with 12 coefficients
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
@@ -149,7 +148,7 @@ class GetSoundStats:
         }
 
         # Write the dictionary to a JSON file
-        with open('soundStats.json', 'a') as outfile:
+        with open('testStats.json', 'a') as outfile:
             for key, value in soundStats.items():
                 if isinstance(value, np.float32):
                     soundStats[key] = float(value)
@@ -171,7 +170,7 @@ def process_song(playlist_dir, song):
 def main():
     audio_extensions = ['.mp3', '.wav', '.flac', '.m4a']
     # Path to the directory containing playlist folders
-    playlists_dir = 'playlists_original'
+    playlists_dir = 'Test_Files'
 
     # Create a dictionary to hold all sound stats
     sound_stats = {}
@@ -184,7 +183,7 @@ def main():
 
         if playlist != '.DS_Store':
             # Use ThreadPoolExecutor to process multiple songs simultaneously
-            with ThreadPoolExecutor(max_workers=7) as executor:
+            with ThreadPoolExecutor(max_workers=48) as executor:
                 # Loop through each song in the playlist folder
                 for song in os.listdir(playlist_dir):
                     if song.endswith(tuple(audio_extensions)):
